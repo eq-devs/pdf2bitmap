@@ -5,3 +5,7 @@
 * Control over image quality and resolution
 * Option to save images to file or return as in-memory data
 * Diagnostic tools for PDF access issues
+
+
+## 0.0.2
+* Refactor PDF to Bitmap conversion logic

@@ -1,6 +1,6 @@
 name: pdf2bitmap
 description: "A Flutter plugin that converts PDF files to high-quality bitmap images on Android devices."
-version: 0.0.1
+version: 0.0.2
 homepage: https://github.com/eq-devs/pdf2bitmap
 
 environment:
