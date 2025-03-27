@@ -119,127 +119,122 @@ class Pdf2bitmapPlugin: FlutterPlugin, MethodCallHandler {
                 }
             }
             "convertPdfToBitmap" -> {
-                try {
-                    val filePath = call.argument<String>("filePath")
-                    val pageNumber = call.argument<Int>("pageNumber") ?: 0
-                    val dpi = call.argument<Int>("dpi") ?: 300
-                    val scaleFactor = call.argument<Double>("scaleFactor")?.toFloat() ?: 2.0f
-                    val savePath = call.argument<String>("savePath")
+    try {
+        val filePath = call.argument<String>("filePath")
+        val pageNumber = call.argument<Int>("pageNumber") ?: 0
+        val dpi = call.argument<Int>("dpi") ?: 300
+        val scaleFactor = call.argument<Double>("scaleFactor")?.toFloat() ?: 2.0f
+        val savePath = call.argument<String>("savePath")
 
-                    if (filePath == null) {
-                        result.error("INVALID_ARGUMENTS", "File path cannot be null", null)
-                        return
-                    }
+        if (filePath == null) {
+            result.error("INVALID_ARGUMENTS", "File path cannot be null", null)
+            return
+        }
 
-                    Log.d(TAG, "Converting PDF: $filePath, page: $pageNumber, dpi: $dpi, scale: $scaleFactor")
+        Log.d(TAG, "Converting PDF: $filePath, page: $pageNumber, dpi: $dpi, scale: $scaleFactor")
 
-                    val file = File(filePath)
-                    if (!file.exists()) {
-                        result.error("FILE_NOT_FOUND", "PDF file not found at path: $filePath", null)
-                        return
-                    }
+        val file = File(filePath)
+        if (!file.exists()) {
+            result.error("FILE_NOT_FOUND", "PDF file not found at path: $filePath", null)
+            return
+        }
 
-                    if (!file.canRead()) {
-                        result.error("PERMISSION_ERROR", "Cannot read file (permission denied): $filePath", null)
-                        return
-                    }
+        if (!file.canRead()) {
+            result.error("PERMISSION_ERROR", "Cannot read file (permission denied): $filePath", null)
+            return
+        }
 
-                    var parcelFileDescriptor: ParcelFileDescriptor? = null
-                    var pdfRenderer: PdfRenderer? = null
-                    var page: PdfRenderer.Page? = null
-                    var bitmap: Bitmap? = null
+        var parcelFileDescriptor: ParcelFileDescriptor? = null
+        var pdfRenderer: PdfRenderer? = null
+        var page: PdfRenderer.Page? = null
+        var bitmap: Bitmap? = null
 
-                    try {
-                        // Open the PDF file
-                        parcelFileDescriptor = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
-                        pdfRenderer = PdfRenderer(parcelFileDescriptor)
+        try {
+            // Open the PDF file
+            parcelFileDescriptor = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+            pdfRenderer = PdfRenderer(parcelFileDescriptor)
 
-                        if (pageNumber >= pdfRenderer.pageCount || pageNumber < 0) {
-                            throw IOException("Invalid page number: $pageNumber, total pages: ${pdfRenderer.pageCount}")
-                        }
-
-                        // Open the page
-                        page = pdfRenderer.openPage(pageNumber)
-
-                        // Calculate dimensions based on scale factor
-                        val width = (page.width * scaleFactor).toInt()
-                        val height = (page.height * scaleFactor).toInt()
-
-                        // Create bitmap with ARGB_8888 for best quality
-                        bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-                        val canvas = Canvas(bitmap)
-                        canvas.drawColor(Color.WHITE)
-
-                        // Apply scaling matrix
-                        val matrix = Matrix()
-                        matrix.setScale(scaleFactor, scaleFactor)
-
-                        // Render the page with the matrix
-                        page.render(bitmap, null, matrix, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-
-                        // Create a copy of the bitmap to ensure it won't be recycled prematurely
-                        val resultBitmap = bitmap.copy(bitmap.config?: Bitmap.Config.ARGB_8888, true)
-
-                        // Process the result bitmap (save to file or return as base64)
-                        if (savePath != null) {
-                            // Save to file if savePath is provided
-                            val outputFile = File(savePath)
-
-                            // Ensure parent directory exists
-                            outputFile.parentFile?.mkdirs()
-
-                            FileOutputStream(outputFile).use { out ->
-                                resultBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
-                            }
-
-                            val response = hashMapOf<String, Any>(
-                                "filePath" to savePath,
-                                "width" to width,
-                                "height" to height,
-                                "pageCount" to pdfRenderer.pageCount
-                            )
-
-                            result.success(response)
-                        } else {
-                            // Convert to base64
-                            val outputStream = ByteArrayOutputStream()
-                            resultBitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
-                            val imageBytes = outputStream.toByteArray()
-                            val base64Image = Base64.encodeToString(imageBytes, Base64.NO_WRAP)
-
-                            val response = hashMapOf<String, Any>(
-                                "base64Image" to base64Image,
-                                "width" to width,
-                                "height" to height,
-                                "pageCount" to pdfRenderer.pageCount
-                            )
-
-                            result.success(response)
-                        }
-
-                        // Clean up the result bitmap after it's been processed
-                        resultBitmap.recycle()
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error converting PDF", e)
-                        result.error("CONVERSION_ERROR", "Error converting PDF: ${e.message}", e.stackTraceToString())
-                    } finally {
-                        try {
-                            // Close resources in finally block to ensure cleanup
-                            page?.close()
-                            pdfRenderer?.close()
-                            parcelFileDescriptor?.close()
-
-                            // We can safely recycle the original bitmap
-                            bitmap?.recycle()
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Error closing resources: ${e.message}", e)
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Unexpected error", e)
-                    result.error("UNEXPECTED_ERROR", "Unexpected error: ${e.message}", e.stackTraceToString())
-                }
+            if (pageNumber >= pdfRenderer.pageCount || pageNumber < 0) {
+                throw IOException("Invalid page number: $pageNumber, total pages: ${pdfRenderer.pageCount}")
             }
+
+            // Open the page
+            page = pdfRenderer.openPage(pageNumber)
+
+            // Calculate dimensions based on scale factor
+            val width = (page.width * scaleFactor).toInt()
+            val height = (page.height * scaleFactor).toInt()
+
+            // Create bitmap with ARGB_8888 for best quality
+            bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            canvas.drawColor(Color.WHITE)
+
+            // Apply scaling matrix
+            val matrix = Matrix()
+            matrix.setScale(scaleFactor, scaleFactor)
+
+            // Render the page with the matrix
+            page.render(bitmap, null, matrix, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+
+            // Create a copy of the bitmap to ensure it won't be recycled prematurely
+            val resultBitmap = bitmap.copy(bitmap.config?: Bitmap.Config.ARGB_8888, true)
+
+            // Determine where to save the bitmap
+            val outputFilePath = if (savePath != null) {
+                savePath
+            } else {
+                // Create a temp file in the cache directory
+                val fileName = "page_${pageNumber}_${System.currentTimeMillis()}.png"
+                val cacheDir = context.cacheDir
+                File(cacheDir, fileName).absolutePath
+            }
+
+            // Save the bitmap to the file
+            val outputFile = File(outputFilePath)
+            
+            // Ensure parent directory exists
+            outputFile.parentFile?.mkdirs()
+            
+            FileOutputStream(outputFile).use { out ->
+                resultBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+            }
+
+            // Create response with bitmap file path and metadata
+            val response = hashMapOf<String, Any>(
+                "filePath" to outputFilePath, // This is the path to the saved bitmap
+                "originalPdfPath" to filePath, // Original PDF path
+                "width" to width,
+                "height" to height,
+                "pageCount" to pdfRenderer.pageCount
+            )
+
+            Log.d(TAG, "Bitmap saved to: $outputFilePath")
+            result.success(response)
+
+            // Clean up the result bitmap after it's been processed
+            resultBitmap.recycle()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error converting PDF", e)
+            result.error("CONVERSION_ERROR", "Error converting PDF: ${e.message}", e.stackTraceToString())
+        } finally {
+            try {
+                // Close resources in finally block to ensure cleanup
+                page?.close()
+                pdfRenderer?.close()
+                parcelFileDescriptor?.close()
+
+                // We can safely recycle the original bitmap
+                bitmap?.recycle()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error closing resources: ${e.message}", e)
+            }
+        }
+    } catch (e: Exception) {
+        Log.e(TAG, "Unexpected error", e)
+        result.error("UNEXPECTED_ERROR", "Unexpected error: ${e.message}", e.stackTraceToString())
+    }
+}
             "getPdfPageCount" -> {
                 try {
                     val filePath = call.argument<String>("filePath")
